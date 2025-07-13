@@ -1,0 +1,24 @@
+{
+  "name": "mpd-mpc-node",
+  "version": "1.0.0",
+  "description": "Music Player Daemon (MPD) server using Model Context Protocol",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@types/node": "^24.0.13",
+    "mpd2": "^1.0.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.76"
+  }
+}

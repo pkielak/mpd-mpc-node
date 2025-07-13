@@ -1,156 +1,147 @@
-# MPD Model Context Protocol
+# MPD MCP Server
 
-A Deno-based model context protocol interface for controlling Music Player Daemon (MPD). This library provides a clean, programmatic interface for controlling MPD playback, queue management, and other MPD features using the @teemukurki/mpd client library.
+A Music Player Daemon (MPD) server using Model Context Protocol (MCP) to provide LLM access to your music library.
 
-## Setup
+## Overview
 
-### Prerequisites
+This project provides a bridge between MPD (Music Player Daemon) and the Model Context Protocol (MCP). It allows AI models to:
 
-- [Deno](https://deno.land/) installed
-- MPD server running (locally or remotely)
+- Control music playback (play, pause, stop, next, previous)
+- Manage playlists (add, remove, clear)
+- Search the music library
+- Get information about the current playing track
+- Adjust volume and playback settings
 
-### Configuration
+## Prerequisites
 
-The MPD connection can be configured using environment variables:
+- Node.js v18 or higher
+- An MPD server running locally or remotely
+- TypeScript (for development)
 
-- `MPD_HOST`: MPD server hostname (default: "localhost")
-- `MPD_PORT`: MPD server port (default: 6600)
+## Installation
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/mpd-mpc-node.git
+   cd mpd-mpc-node
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Build the project:
+   ```bash
+   npm run build
+   ```
 
 ## Usage
 
-The model context protocol is designed to be imported and used in your Deno applications:
+### Configuration
 
-```typescript
-import { mpdContext } from "./server.ts";
+The server can be configured using environment variables:
 
-// Get current status
-const status = await mpdContext.getStatus();
-console.log(status);
+- `MPD_HOST`: MPD server hostname (default: `localhost`)
+- `MPD_PORT`: MPD server port (default: `6600`)
+- `TRANSPORT`: Transport protocol, either `stdio` or `http` (default: `stdio`)
+- `HTTP_PORT`: Port for HTTP server when using HTTP transport (default: `3000`)
 
-// Play a song
-await mpdContext.play(0); // Play the first song in the queue
+### Running the Server
 
-// Set volume
-await mpdContext.setVolume(70);
-```
-
-You can run the example script to see the protocol in action:
+Start the server in stdio mode (for use with LLM applications that support MCP):
 
 ```bash
-deno task run-example
+npm start
 ```
 
-## Available Methods
+Or run in HTTP mode for development and testing:
 
-### Status & Information
+```bash
+TRANSPORT=http npm start
+```
 
-- `getStatus()` - Get MPD status information
-- `getCurrentSong()` - Get currently playing song
-- `getQueue()` - Get the current playlist queue
+For development with hot reloading:
+
+```bash
+npm run dev
+```
+
+## MCP Resources
+
+The server exposes the following MCP resources:
+
+- `status`: Current MPD status (state, volume, playlist info)
+- `current-song`: Information about the currently playing song
+- `playlist`: Current playlist contents
+- `stats`: MPD server statistics
+- `library`: Complete music library
+
+## MCP Tools
+
+The server provides the following MCP tools:
 
 ### Playback Control
 
-- `play(position?: number)` - Start playback (optionally at a specific position)
-- `pause()` - Pause playback
-- `stop()` - Stop playback
-- `next()` - Play next song
-- `previous()` - Play previous song
+Control music playback:
+
+```json
+{
+  "action": "play|pause|stop|next|previous",
+  "position": 0 // Optional position for play action
+}
+```
 
 ### Volume Control
 
-- `setVolume(volume: number)` - Set volume (0-100) - *Simulated as not directly available in the library*
+Adjust volume:
+
+```json
+{
+  "volume": 50 // 0-100
+}
+```
+
+### Search Music
+
+Search the music library:
+
+```json
+{
+  "type": "artist|album|title|genre|any",
+  "query": "search term"
+}
+```
+
+### Playlist Manager
+
+Manage the playlist:
+
+```json
+{
+  "action": "add|delete|clear",
+  "uri": "file:///path/to/song.mp3", // Required for add
+  "position": 0 // Required for delete
+}
+```
 
 ### Playback Options
 
-- `setRandom(state: boolean)` - Set random mode - *Simulated as not directly available in the library*
-- `setRepeat(state: boolean)` - Set repeat mode - *Simulated as not directly available in the library*
-- `setSingle(state: boolean)` - Set single mode - *Simulated as not directly available in the library*
-- `setConsume(state: boolean)` - Set consume mode - *Simulated as not directly available in the library*
+Set playback options:
 
-### Database & Queue Operations
-
-- `search(query: string)` - Search the MPD database - *Uses listTracks() as fallback*
-- `add(uri: string)` - Add a song to the queue - *Maps to addToQueue()*
-- `clear()` - Clear the current queue - *Maps to clearQueue()*
-- `update()` - Update the MPD database - *Simulated as not directly available in the library*
-
-### Library Management
-
-- `getPlaylists()` - Get all available albums - *Maps to listAlbums()*
-- `getPlaylist(name: string)` - Get tracks in an album - *Maps to listTracks()*
-- `loadPlaylist(name: string)` - Load an album into the queue - *Maps to addAlbumToQueue()*
-- `listArtists()` - List all artists in the database
-
-## Example Usage
-
-Here's a simple example of how to use the model context protocol:
-
-```typescript
-import { mpdContext } from "./server.ts";
-
-// Basic playback control
-async function playbackDemo() {
-  // Get current status
-  const status = await mpdContext.getStatus();
-  console.log(`Current state: ${status.state}`);
-  
-  // Get current song
-  const song = await mpdContext.getCurrentSong();
-  console.log(`Now playing: ${song.Title} by ${song.Artist}`);
-  
-  // Play next song
-  await mpdContext.next();
-  console.log("Skipped to next song");
-  
-  // Set volume to 70% (note: simulated function)
-  await mpdContext.setVolume(70);
-  console.log("Volume set to 70%");
-  
-  // List some artists
-  const artists = await mpdContext.listArtists();
-  console.log(`Music library has ${artists.length} artists`);
-  
-  // Add an album to the queue
-  if (artists.length > 0) {
-    await mpdContext.loadPlaylist(artists[0]);
-    console.log(`Added music by ${artists[0]} to queue`);
-  }
+```json
+{
+  "repeat": true, // Optional
+  "random": false, // Optional
+  "single": false, // Optional
+  "consume": false // Optional
 }
-
-playbackDemo();
 ```
 
-## Example Scripts
+## Contributing
 
-The project includes example scripts to demonstrate usage:
-
-```bash
-# Run the full example script
-deno task run-example
-
-# Run the client test script (demonstrates core functionality)
-deno task test-client
-```
-
-## Project Structure
-
-- `server.ts`: The MPD model context protocol implementation
-- `client_test.ts`: A simple script that demonstrates protocol usage
-- `example.ts`: A more comprehensive example of using the protocol
-- `method_test.ts`: A utility to discover available MPD client methods
-
-## Library Limitations
-
-This model context protocol is built on top of the @teemukurki/mpd library, which has some limitations:
-
-1. **Limited MPD Command Support**: The library doesn't support all MPD commands. Some functions like volume control and playback modes are simulated.
-
-2. **Playlist vs Album**: The library uses album-related functions rather than playlist-specific commands, so playlist management is mapped to album management.
-
-3. **Function Name Differences**: The MPD protocol functions are implemented with slightly different names than the standard MPD protocol.
-
-For additional functionality, consider using a more comprehensive MPD client library.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.
