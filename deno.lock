@@ -1,0 +1,46 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/assert@1": "1.0.13",
+    "jsr:@std/assert@^1.0.8": "1.0.13",
+    "jsr:@std/bytes@^1.0.3": "1.0.6",
+    "jsr:@std/bytes@^1.0.4": "1.0.6",
+    "jsr:@std/internal@^1.0.6": "1.0.9",
+    "jsr:@teemukurki/mpd-deno-client@^0.0.4": "0.0.4",
+    "jsr:@teemukurki/mpd@^0.0.6": "0.0.6"
+  },
+  "jsr": {
+    "@std/assert@1.0.13": {
+      "integrity": "ae0d31e41919b12c656c742b22522c32fb26ed0cba32975cb0de2a273cb68b29",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/bytes@1.0.6": {
+      "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
+    },
+    "@std/internal@1.0.9": {
+      "integrity": "bdfb97f83e4db7a13e8faab26fb1958d1b80cc64366501af78a0aee151696eb8"
+    },
+    "@teemukurki/mpd@0.0.6": {
+      "integrity": "0ad4f677cedc6bee104c8e4b09b65a3b539cb412a51aac342c1cb2bebae77bb5",
+      "dependencies": [
+        "jsr:@std/bytes@^1.0.4"
+      ]
+    },
+    "@teemukurki/mpd-deno-client@0.0.4": {
+      "integrity": "b8c7207b37d5bdd1c479fb2c7ea847878d724cfcc09a884a45a9c35f12d016ff",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.8",
+        "jsr:@std/bytes@^1.0.3"
+      ]
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/assert@1",
+      "jsr:@teemukurki/mpd-deno-client@^0.0.4",
+      "jsr:@teemukurki/mpd@^0.0.6"
+    ]
+  }
+}
