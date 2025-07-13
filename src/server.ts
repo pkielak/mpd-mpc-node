@@ -523,7 +523,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 /**
  * Helper function to ensure the MPD client is connected
  */
-async function ensureConnected(): Promise<void> {
+export async function ensureConnected(): Promise<void> {
   if (!(mpdClient as any).connected) {
     try {
       await mpdClient.connect();
