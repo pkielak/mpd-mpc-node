@@ -353,8 +353,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         try {
-          // MPD uses 'any' as a search field, but we present a friendlier option to users
+          // Fix search arguments format - MPD expects the search type and query as separate args
           const searchType = type === "any" ? "any" : type;
+          // Use console.error for debugging
+          console.error(`Searching for ${searchType}: "${query}"`);
           const results = await mpdClient.search(searchType, query);
 
           if (results.length === 0) {

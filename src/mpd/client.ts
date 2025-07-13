@@ -254,10 +254,29 @@ export class MpdClientImpl implements MpdClient {
   }
 
   async search(type: string, query: string): Promise<MpdSong[]> {
-    const response = await this.cmd("search", [type, query]);
-    const parsed = this.parseArrayResponse(response);
+    // Debug the search parameters
+    console.error(`Searching for ${type}: "${query}"`);
 
-    return parsed.map((item) => this.convertToMpdSong(item));
+    try {
+      // Format the search command directly as a string with proper escaping
+      // This approach works better than the array-based approach
+      const command = `search "${type}" "${query.replace(/"/g, '\\"')}"`;
+      const response = await this.client.sendCommand(command);
+      const parsed = this.parseArrayResponse(response);
+      return parsed.map((item) => this.convertToMpdSong(item));
+    } catch (error) {
+      console.error(`MPD search error:`, error);
+
+      // Fallback approach: try with the array-based approach
+      try {
+        const response = await this.cmd("search", [type, query]);
+        const parsed = this.parseArrayResponse(response);
+        return parsed.map((item) => this.convertToMpdSong(item));
+      } catch (fallbackError) {
+        console.error(`MPD fallback search error:`, fallbackError);
+        throw error; // Throw the original error
+      }
+    }
   }
 
   async find(type: string, query: string): Promise<MpdSong[]> {
