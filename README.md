@@ -7,6 +7,7 @@ A Music Player Daemon (MPD) server using Model Context Protocol (MCP) to provide
 This project provides a bridge between MPD (Music Player Daemon) and the Model Context Protocol (MCP). It allows AI models to:
 
 - Control music playback (play, pause, stop, next, previous)
+- Play specific artists, albums, or songs by name
 - Manage playlists (add, remove, clear)
 - Search the music library
 - Get information about the current playing track
@@ -23,7 +24,9 @@ This project provides a bridge between MPD (Music Player Daemon) and the Model C
 1. Clone this repository:
    ```bash
    git clone https://github.com/yourusername/mpd-mpc-node.git
-   cd mpd-mpc-node
+   # mpd-mpc-node
+
+   Music Player Daemon (MPD) MCP Server - Control your music with language models via the Model Context Protocol
    ```
 
 2. Install dependencies:
@@ -81,7 +84,57 @@ The server exposes the following MCP resources:
 
 The server provides the following MCP tools:
 
-### Playback Control
+### Basic Playback
+
+Simple playback controls:
+
+```json
+// Start playing music
+{}  // No parameters needed for play_music
+
+// Pause music
+{}  // No parameters needed for pause_music
+
+// Skip to next track
+{}  // No parameters needed for next_track
+```
+
+### Play Specific Music
+
+Play music by artist, album, or song title:
+
+```json
+// Play music by an artist
+{
+  "query": "deftones",
+  "type": "artist"
+}
+
+// Play an album
+{
+  "query": "white pony",
+  "type": "album"
+}
+
+// Play a specific song
+{
+  "query": "be quiet",
+  "type": "title"
+}
+
+// Simple search and play
+{
+  "query": "deftones"
+}
+```
+
+**Important tips for play_specific:**
+- Use simple, short search terms (e.g., "be quiet" instead of "Be Quiet and Drive (Far Away)")
+- For song titles, avoid including artist names, album names, or parentheses
+- If you're copying from search results, extract just the main title part
+- When in doubt, use fewer words in your query for better results
+
+### Advanced Playback Control
 
 Control music playback:
 
@@ -107,9 +160,34 @@ Adjust volume:
 Search the music library:
 
 ```json
+// Simple search (searches all fields)
 {
-  "type": "artist|album|title|genre|any",
   "query": "search term"
+}
+
+// Field-specific search
+{
+  "query": "search term",
+  "type": "artist|album|title|any"
+}
+```
+
+The search results include both human-readable text and structured JSON data that can be used by other tools:
+
+```json
+{
+  "count": 5,
+  "results": [
+    {
+      "artist": "Artist Name",
+      "title": "Song Title",
+      "album": "Album Name",
+      "file": "path/to/file.mp3",
+      "id": 123,
+      "position": 4
+    },
+    // more results...
+  ]
 }
 ```
 
@@ -135,6 +213,36 @@ Set playback options:
   "random": false, // Optional
   "single": false, // Optional
   "consume": false // Optional
+}
+```
+
+## Help Tool
+
+The server includes a help tool that provides guidance on using the available tools:
+
+```json
+// Get general help
+{} 
+
+// Get help on a specific topic
+{
+  "topic": "search|playback|playlist|volume"
+}
+```
+
+## Using with Jan.ai
+
+To use this MCP server with Jan.ai, add the following configuration in Jan.ai's MCP settings:
+
+```json
+{
+  "command": "node",
+  "args": ["/path/to/mpd-mpc-node/dist/server.js"],
+  "env": {
+    "MPD_HOST": "localhost",
+    "MPD_PORT": "6600"
+  },
+  "active": true
 }
 ```
 

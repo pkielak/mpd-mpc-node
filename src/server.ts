@@ -31,7 +31,7 @@ const mpdClient = new MpdClientImpl(MPD_HOST, MPD_PORT);
  */
 const server = new Server(
   {
-    name: "mpd-mcp-server",
+    name: "mpd-mpc-server",
     version: "1.0.0",
     description: "Music Player Daemon (MPD) MCP Server",
   },
@@ -54,31 +54,36 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         uri: "mpd://status",
         mimeType: "application/json",
         name: "MPD Status",
-        description: "Current MPD playback status",
+        description:
+          "Current MPD playback status including volume, repeat/shuffle settings, and what's playing",
       },
       {
         uri: "mpd://current-song",
         mimeType: "application/json",
         name: "Current Song",
-        description: "Information about the currently playing song",
+        description:
+          "Information about the currently playing song (artist, title, album)",
       },
       {
         uri: "mpd://playlist",
         mimeType: "application/json",
         name: "Playlist",
-        description: "Current MPD playlist contents",
+        description:
+          "Current MPD playlist contents - all songs queued for playback",
       },
       {
         uri: "mpd://stats",
         mimeType: "application/json",
         name: "MPD Stats",
-        description: "Statistics about the MPD server and music library",
+        description:
+          "Statistics about the MPD server and music library (number of songs, artists, etc.)",
       },
       {
         uri: "mpd://library",
         mimeType: "application/json",
         name: "Music Library",
-        description: "Complete listing of available music in the MPD library",
+        description:
+          "Complete listing of available music in the MPD library (all songs)",
       },
     ],
   };
@@ -161,6 +166,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
+        name: "help",
+        description:
+          "Get help on how to use the music player and available commands",
+        inputSchema: {
+          type: "object",
+          properties: {
+            topic: {
+              type: "string",
+              description:
+                "Optional topic to get help on (e.g., 'search', 'playback', 'playlist')",
+            },
+          },
+        },
+      },
+      {
+        name: "play_music",
+        description: "Start playing music",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "pause_music",
+        description: "Pause the currently playing music",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "next_track",
+        description: "Skip to the next song in the playlist",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
         name: "playback_control",
         description:
           "Control music playback (play, pause, stop, next, previous)",
@@ -199,21 +243,44 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "search_music",
-        description: "Search for music in the MPD library",
+        description:
+          "Search for music in the MPD library by artist, album, song title, or any field",
         inputSchema: {
           type: "object",
           properties: {
-            type: {
-              type: "string",
-              enum: ["artist", "album", "title", "genre", "any"],
-              description: "Type of search to perform",
-            },
             query: {
               type: "string",
-              description: "Search query",
+              description: "Search query - what to search for",
+            },
+            type: {
+              type: "string",
+              enum: ["artist", "album", "title", "any"],
+              description:
+                "Optional: Type of search to perform (defaults to 'any')",
             },
           },
-          required: ["type", "query"],
+          required: ["query"],
+        },
+      },
+      {
+        name: "play_specific",
+        description:
+          "Play specific music by artist, album, song title, or a search query",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "What to play - artist, album, or song title",
+            },
+            type: {
+              type: "string",
+              enum: ["artist", "album", "title", "any"],
+              description:
+                "Optional: Type of search to perform (defaults to 'any')",
+            },
+          },
+          required: ["query"],
         },
       },
       {
@@ -279,6 +346,341 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     await ensureConnected();
 
     switch (request.params.name) {
+      case "help": {
+        const topic = request.params.arguments?.topic as string | undefined;
+        let helpText = "";
+
+        if (!topic) {
+          helpText = `# MPD Music Player Help
+
+Welcome to the MPD Music Control Server! Here are the available commands:
+
+## Basic Controls
+- \`play_music\` - Start playing music
+- \`pause_music\` - Pause the currently playing music
+- \`next_track\` - Skip to the next song
+- \`play_specific\` - Play specific artist, album, or song by name (use simple terms)
+- \`playback_control\` - Advanced playback control with options
+
+## Searching Music
+- \`search_music\` - Search for music by artist, album, title or any field
+
+## Playlist Management
+- \`playlist_manager\` - Manage your playlist (add, remove, clear)
+
+## Settings
+- \`volume_control\` - Set the volume level
+- \`playback_options\` - Set repeat, random, single, and consume modes
+
+## Resources
+You can also view:
+- Current playing song info
+- Your playlist
+- Library statistics
+
+For more specific help, try \`help\` with a topic like "search", "playback", or "playlist".`;
+        } else {
+          // Topic-specific help
+          switch (topic.toLowerCase()) {
+            case "search":
+              helpText = `# Music Search Help
+
+Use \`search_music\` to find music in your library:
+
+Basic search (searches all fields):
+- Just provide a query string
+- Example: \`{"query": "deftones"}\`
+
+Advanced search (specify field type):
+- Optionally specify the type and query
+- Types: "artist", "album", "title", "any"
+- Example: \`{"type": "artist", "query": "deftones"}\`
+
+Search results will show matching songs that you can then play.`;
+              break;
+
+            case "playback":
+            case "play":
+              helpText = `# Playback Control Help
+
+Basic controls:
+- \`play_music\` - Start playing music
+- \`pause_music\` - Pause the current track
+- \`next_track\` - Skip to the next track
+- \`play_specific\` - Play specific music by name (recommended)
+  - Examples:
+  - Play artist: \`{"query": "deftones", "type": "artist"}\`
+  - Play album: \`{"query": "white pony", "type": "album"}\`
+  - Play song: \`{"query": "be quiet", "type": "title"}\`
+  - Simple search and play: \`{"query": "deftones"}\`
+  - Note: Use simple search terms rather than copying the full formatted result
+
+Advanced control with \`playback_control\`:
+- Play: \`{"action": "play"}\`
+- Play specific position: \`{"action": "play", "position": 3}\`
+- Pause: \`{"action": "pause"}\`
+- Stop: \`{"action": "stop"}\`
+- Next: \`{"action": "next"}\`
+- Previous: \`{"action": "previous"}\`
+
+Playback options with \`playback_options\`:
+- Repeat mode: \`{"repeat": true}\`
+- Random mode: \`{"random": true}\`
+- Single mode: \`{"single": true}\`
+- Consume mode: \`{"consume": true}\``;
+              break;
+
+            case "playlist":
+              helpText = `# Playlist Management Help
+
+Use \`playlist_manager\` with these actions:
+
+- Add a song: \`{"action": "add", "uri": "file_path_or_uri"}\`
+- Remove a song: \`{"action": "delete", "position": 2}\`
+- Clear playlist: \`{"action": "clear"}\`
+
+You can view the current playlist contents through the MPD resources.`;
+              break;
+
+            case "volume":
+              helpText = `# Volume Control Help
+
+Use \`volume_control\` to adjust the volume:
+
+\`{"volume": 75}\`
+
+The volume range is 0-100, where:
+- 0 is muted
+- 100 is maximum volume`;
+              break;
+
+            default:
+              helpText = `No specific help available for "${topic}". Try general help or one of these topics: "search", "playback", "playlist", "volume".`;
+          }
+        }
+
+        return {
+          content: [{ type: "text", text: helpText }],
+        };
+      }
+
+      case "play_music": {
+        try {
+          await mpdClient.play();
+          const status = await mpdClient.status();
+          const currentSong = await mpdClient.currentSong();
+          let songInfo = "No song is playing.";
+
+          if (currentSong) {
+            songInfo = `Now playing: ${currentSong.artist || "Unknown Artist"} - ${currentSong.title || currentSong.file}`;
+            if (currentSong.album) {
+              songInfo += ` (${currentSong.album})`;
+            }
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Music playback started. ${songInfo}`,
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(`Error starting music: ${(error as Error).message}`);
+        }
+      }
+
+      case "pause_music": {
+        try {
+          await mpdClient.pause();
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Music playback paused.",
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(`Error pausing music: ${(error as Error).message}`);
+        }
+      }
+
+      case "next_track": {
+        try {
+          await mpdClient.next();
+          const currentSong = await mpdClient.currentSong();
+          let songInfo = "No next song available.";
+
+          if (currentSong) {
+            songInfo = `Now playing: ${currentSong.artist || "Unknown Artist"} - ${currentSong.title || currentSong.file}`;
+            if (currentSong.album) {
+              songInfo += ` (${currentSong.album})`;
+            }
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Skipped to next song. ${songInfo}`,
+              },
+            ],
+          };
+        } catch (error) {
+          throw new Error(
+            `Error skipping to next track: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "play_specific": {
+        const query = String(request.params.arguments?.query);
+        const type = request.params.arguments?.type
+          ? String(request.params.arguments.type)
+          : "any";
+
+        if (!query) {
+          throw new Error("Query is required - specify what you want to play");
+        }
+
+        try {
+          console.error(`Searching to play: ${type}="${query}"`);
+
+          // First, search for the music using the original query
+          let results = await mpdClient.search(type, query);
+
+          // If no results, try a simplified search
+          if (results.length === 0) {
+            // Extract just the title part if it looks like "Artist - Title (Album)"
+            const simplifiedQuery =
+              query.split(" - ").pop()?.split(" (")[0] || query;
+
+            if (simplifiedQuery !== query) {
+              console.error(
+                `No results, trying simplified query: ${simplifiedQuery}`,
+              );
+              results = await mpdClient.search("title", simplifiedQuery);
+            }
+          }
+
+          // If still no results, try a more aggressive search
+          if (results.length === 0 && query.includes(" - ")) {
+            // Try searching by artist
+            const artistPart = query.split(" - ")[0].trim();
+            console.error(`No results, trying artist search: ${artistPart}`);
+            results = await mpdClient.search("artist", artistPart);
+          }
+
+          if (results.length === 0) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Could not find any music matching "${query}". Try a different search term.`,
+                },
+              ],
+            };
+          }
+
+          // Clear the current playlist
+          await mpdClient.playlistClear();
+
+          // Handle different types of searches
+          if (type === "artist" || type === "album") {
+            // For artists or albums, add all matching songs to the playlist
+            const songsByAlbum = new Map<string, MpdSong[]>();
+
+            // Group songs by album
+            for (const song of results) {
+              const albumName = song.album || "Unknown Album";
+              if (!songsByAlbum.has(albumName)) {
+                songsByAlbum.set(albumName, []);
+              }
+              songsByAlbum.get(albumName)!.push(song);
+            }
+
+            // Add all songs to the playlist
+            console.error(`Adding ${results.length} songs to playlist`);
+            for (const song of results) {
+              try {
+                console.error(`Adding song: ${song.file}`);
+                await mpdClient.playlistAdd(song.file);
+              } catch (addError) {
+                console.error(`Error adding song: ${addError}`);
+                // Continue to next song if one fails
+              }
+            }
+
+            // Start playing
+            await mpdClient.play(0);
+
+            // Get current song
+            const currentSong = await mpdClient.currentSong();
+
+            // Prepare info text
+            let infoText = "";
+            if (type === "artist") {
+              infoText = `Now playing music by ${query}. Added ${results.length} songs from ${songsByAlbum.size} albums to the playlist.`;
+            } else {
+              infoText = `Now playing album matching "${query}". Added ${results.length} songs to the playlist.`;
+            }
+
+            // Add current song info if available
+            if (currentSong) {
+              infoText += `\n\nNow playing: ${currentSong.artist || "Unknown Artist"} - ${currentSong.title || currentSong.file}`;
+              if (currentSong.album) {
+                infoText += ` (${currentSong.album})`;
+              }
+            }
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: infoText,
+                },
+              ],
+            };
+          } else {
+            // For song titles or general searches, just play the first match
+            const topMatch = results[0];
+
+            // Add the song to the playlist
+            console.error(`Adding song to playlist: ${topMatch.file}`);
+            try {
+              await mpdClient.playlistAdd(topMatch.file);
+            } catch (addError) {
+              console.error(`Error adding song: ${addError}`);
+              throw new Error(
+                `Could not add song to playlist: ${(addError as Error).message}`,
+              );
+            }
+
+            // Start playing
+            await mpdClient.play(0);
+
+            // Format song info
+            let songInfo = `${topMatch.artist || "Unknown Artist"} - ${topMatch.title || topMatch.file}`;
+            if (topMatch.album) {
+              songInfo += ` (${topMatch.album})`;
+            }
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Now playing: ${songInfo}\n\nFound ${results.length} matches total for "${query}".`,
+                },
+              ],
+            };
+          }
+        } catch (error) {
+          throw new Error(`Error playing music: ${(error as Error).message}`);
+        }
+      }
+
       case "playback_control": {
         const action = String(request.params.arguments?.action);
         const position =
@@ -345,17 +747,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_music": {
-        const type = String(request.params.arguments?.type);
         const query = String(request.params.arguments?.query);
+        // Type is optional, defaults to "any"
+        const type = request.params.arguments?.type
+          ? String(request.params.arguments.type)
+          : "any";
 
-        if (!type || !query) {
-          throw new Error("Search type and query are required");
+        if (!query) {
+          throw new Error("Search query is required");
         }
 
         try {
-          // Fix search arguments format - MPD expects the search type and query as separate args
-          const searchType = type === "any" ? "any" : type;
-          // Use console.error for debugging
+          // MPD uses 'any' as a search field
+          const searchType = type;
           console.error(`Searching for ${searchType}: "${query}"`);
           const results = await mpdClient.search(searchType, query);
 
@@ -364,17 +768,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               content: [
                 {
                   type: "text",
-                  text: `No results found for ${type}: ${query}`,
+                  text: `No results found for "${query}"`,
                 },
               ],
             };
           }
 
+          // Limit to top 15 results for clarity
+          const topResults = results.slice(0, 15);
+
           // Group results by album if searching by artist
           if (type === "artist") {
             const albums = new Map<string, MpdSong[]>();
 
-            for (const song of results) {
+            for (const song of topResults) {
               const albumName = song.album || "Unknown Album";
               if (!albums.has(albumName)) {
                 albums.set(albumName, []);
@@ -382,31 +789,76 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               albums.get(albumName)!.push(song);
             }
 
-            let resultText = `Found ${results.length} tracks in ${albums.size} albums for artist: ${query}\n\n`;
+            let resultText = `Found ${results.length} tracks${results.length > 15 ? " (showing top 15)" : ""} for artist: ${query}\n\n`;
+            let resultData: Array<{
+              artist: string;
+              title: string;
+              album: string;
+              file: string;
+              id?: number;
+              position?: number;
+            }> = [];
 
             albums.forEach((songs, album) => {
               resultText += `Album: ${album}\n`;
               songs.forEach((song) => {
                 resultText += `- ${song.title || song.file}\n`;
+                resultData.push({
+                  artist: song.artist || "Unknown Artist",
+                  title: song.title || song.file,
+                  album: song.album || "Unknown Album",
+                  file: song.file,
+                  id: song.id,
+                  position: song.pos,
+                });
               });
               resultText += "\n";
             });
 
+            // Return only text content for now to avoid format issues
             return {
               content: [{ type: "text", text: resultText }],
             };
           }
 
           // Standard result formatting for other search types
-          let resultText = `Found ${results.length} results for ${type}: ${query}\n\n`;
-          results.forEach((song, index) => {
+          let resultText = `Found ${results.length} results for "${query}"${results.length > 15 ? " (showing top 15)" : ""}:\n\n`;
+          const resultData: Array<{
+            artist: string;
+            title: string;
+            album: string;
+            file: string;
+            id?: number;
+            position?: number;
+          }> = [];
+
+          topResults.forEach((song, index) => {
             resultText += `${index + 1}. ${song.artist || "Unknown Artist"} - ${song.title || song.file}`;
             if (song.album) {
               resultText += ` (${song.album})`;
             }
             resultText += "\n";
+
+            // Add a tip for how to play this exact song
+            if (index === 0) {
+              resultText += `   To play this song, use: play_specific with {"query": "${song.title}"}\n\n`;
+            }
+
+            resultData.push({
+              artist: song.artist || "Unknown Artist",
+              title: song.title || song.file,
+              album: song.album || "Unknown Album",
+              file: song.file,
+              id: song.id,
+              position: song.pos,
+            });
           });
 
+          if (results.length > 15) {
+            resultText += `\n...and ${results.length - 15} more matches.`;
+          }
+
+          // Return only text content for now to avoid format issues
           return {
             content: [{ type: "text", text: resultText }],
           };

@@ -232,7 +232,21 @@ export class MpdClientImpl implements MpdClient {
   }
 
   async playlistAdd(uri: string): Promise<void> {
-    await this.cmd("add", [uri]);
+    // MPD protocol expects a single string for the add command
+    // Try both approaches to ensure compatibility
+    try {
+      // First try the array approach
+      await this.cmd("add", [uri]);
+    } catch (error) {
+      console.error(`Error with array approach: ${error}`);
+      try {
+        // Fall back to direct string command if array approach fails
+        await this.client.sendCommand(`add "${uri.replace(/"/g, '\\"')}"`);
+      } catch (fallbackError) {
+        console.error(`Error with fallback approach: ${fallbackError}`);
+        throw error; // Throw the original error if both methods fail
+      }
+    }
   }
 
   async playlistDelete(position: number): Promise<void> {
@@ -257,26 +271,78 @@ export class MpdClientImpl implements MpdClient {
     // Debug the search parameters
     console.error(`Searching for ${type}: "${query}"`);
 
+    // Process the query to be more search-friendly
+    const processedQuery = this.processSearchQuery(query);
+    console.error(`Processed query: "${processedQuery}"`);
+
+    // Try a series of search approaches to maximize chances of finding results
     try {
-      // Format the search command directly as a string with proper escaping
-      // This approach works better than the array-based approach
-      const command = `search "${type}" "${query.replace(/"/g, '\\"')}"`;
+      // First try: standard string command approach
+      const command = `search "${type}" "${processedQuery.replace(/"/g, '\\"')}"`;
+      console.error(`Search command: ${command}`);
       const response = await this.client.sendCommand(command);
       const parsed = this.parseArrayResponse(response);
-      return parsed.map((item) => this.convertToMpdSong(item));
+      const results = parsed.map((item) => this.convertToMpdSong(item));
+
+      if (results.length > 0) {
+        return results;
+      }
+
+      // Second try: if no results and it's a title search, remove parentheses content
+      if (type === "title" && processedQuery !== query && query.includes("(")) {
+        const simplifiedQuery = query.split("(")[0].trim();
+        console.error(
+          `No results, trying simplified title: "${simplifiedQuery}"`,
+        );
+        const fallbackCommand = `search "${type}" "${simplifiedQuery.replace(/"/g, '\\"')}"`;
+        const fallbackResponse = await this.client.sendCommand(fallbackCommand);
+        const fallbackParsed = this.parseArrayResponse(fallbackResponse);
+        const fallbackResults = fallbackParsed.map((item) =>
+          this.convertToMpdSong(item),
+        );
+
+        if (fallbackResults.length > 0) {
+          return fallbackResults;
+        }
+      }
+
+      // Third try: array approach as fallback
+      console.error(`Trying array approach`);
+      const arrayResponse = await this.cmd("search", [type, processedQuery]);
+      const arrayParsed = this.parseArrayResponse(arrayResponse);
+      return arrayParsed.map((item) => this.convertToMpdSong(item));
     } catch (error) {
       console.error(`MPD search error:`, error);
 
-      // Fallback approach: try with the array-based approach
-      try {
-        const response = await this.cmd("search", [type, query]);
-        const parsed = this.parseArrayResponse(response);
-        return parsed.map((item) => this.convertToMpdSong(item));
-      } catch (fallbackError) {
-        console.error(`MPD fallback search error:`, fallbackError);
-        throw error; // Throw the original error
+      // Last resort: try with any field if we were searching for a specific field
+      if (type !== "any") {
+        try {
+          console.error(`Trying 'any' field search as last resort`);
+          return await this.search("any", query);
+        } catch (anyError) {
+          console.error(`Even 'any' field search failed:`, anyError);
+        }
+      }
+
+      // If nothing worked, return empty results instead of error
+      console.error(`All search attempts failed, returning empty results`);
+      return [];
+    }
+  }
+
+  /**
+   * Process a search query to make it more search-friendly
+   */
+  private processSearchQuery(query: string): string {
+    // If query looks like a formatted result (Artist - Title (Album)),
+    // extract just the title part
+    if (query.includes(" - ") && query.includes("(")) {
+      const titlePart = query.split(" - ")[1]?.split(" (")[0];
+      if (titlePart) {
+        return titlePart.trim();
       }
     }
+    return query;
   }
 
   async find(type: string, query: string): Promise<MpdSong[]> {
