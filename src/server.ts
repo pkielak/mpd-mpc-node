@@ -181,53 +181,53 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "play_music",
-        description: "Start playing music",
+        name: "resume",
+        description: "Resume or start playing music from the current playlist",
         inputSchema: {
           type: "object",
           properties: {},
         },
       },
       {
-        name: "pause_music",
-        description: "Pause the currently playing music",
+        name: "pause",
+        description: "Pause the music that is currently playing",
         inputSchema: {
           type: "object",
           properties: {},
         },
       },
       {
-        name: "next_track",
-        description: "Skip to the next song in the playlist",
+        name: "next",
+        description: "Skip to the next song in your playlist",
         inputSchema: {
           type: "object",
           properties: {},
         },
       },
       {
-        name: "playback_control",
+        name: "player",
         description:
-          "Control music playback (play, pause, stop, next, previous)",
+          "Advanced music player controls - play, stop, or navigate to previous tracks",
         inputSchema: {
           type: "object",
           properties: {
             action: {
               type: "string",
-              enum: ["play", "pause", "stop", "next", "previous"],
-              description: "Playback action to perform",
+              enum: ["resume", "pause", "stop", "next", "previous"],
+              description: "Which action to perform on the music player",
             },
             position: {
               type: "number",
-              description:
-                "Optional position in playlist to play (only used with 'play' action)",
+              description: "Optional song position number for resume action",
             },
           },
           required: ["action"],
         },
       },
       {
-        name: "volume_control",
-        description: "Set the volume level (0-100)",
+        name: "volume",
+        description:
+          "Change how loud the music plays (0 is silent, 100 is loudest)",
         inputSchema: {
           type: "object",
           properties: {
@@ -235,100 +235,108 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "number",
               minimum: 0,
               maximum: 100,
-              description: "Volume level (0-100)",
+              description: "Volume level from 0 (silent) to 100 (loudest)",
             },
           },
           required: ["volume"],
         },
       },
       {
-        name: "search_music",
+        name: "search",
         description:
-          "Search for music in the MPD library by artist, album, song title, or any field",
+          "Find songs in your music library - search by name, artist, or album",
         inputSchema: {
           type: "object",
           properties: {
             query: {
               type: "string",
-              description: "Search query - what to search for",
+              description:
+                "What music you want to find - enter any search terms",
             },
             type: {
               type: "string",
               enum: ["artist", "album", "title", "any"],
               description:
-                "Optional: Type of search to perform (defaults to 'any')",
+                "Optional: Limit search to artist names, album names, or song titles (defaults to 'any')",
             },
           },
           required: ["query"],
         },
       },
       {
-        name: "play_specific",
-        description:
-          "Play specific music by artist, album, song title, or a search query",
+        name: "play",
+        description: "Play a specific song, album, or artist by name",
         inputSchema: {
           type: "object",
           properties: {
             query: {
               type: "string",
-              description: "What to play - artist, album, or song title",
+              description:
+                "Name of the song, album, or artist you want to play",
             },
             type: {
               type: "string",
               enum: ["artist", "album", "title", "any"],
               description:
-                "Optional: Type of search to perform (defaults to 'any')",
+                "Optional: Specify if you're looking for an artist, album, or song title (defaults to 'any')",
             },
           },
           required: ["query"],
         },
       },
       {
-        name: "playlist_manager",
-        description: "Manage the MPD playlist (add, delete, clear)",
+        name: "playlist",
+        description:
+          "Add or remove songs from your playlist, or clear the whole list",
         inputSchema: {
           type: "object",
           properties: {
             action: {
               type: "string",
               enum: ["add", "delete", "clear"],
-              description: "Playlist action to perform",
+              description:
+                "What you want to do with the playlist: add a song, delete a song, or clear all songs",
             },
             uri: {
               type: "string",
-              description: "URI of song to add (required for 'add' action)",
+              description:
+                "Path to the song file you want to add (needed only when adding)",
             },
             position: {
               type: "number",
               description:
-                "Position in playlist (required for 'delete' action)",
+                "Position number of the song to remove (needed only when deleting)",
             },
           },
           required: ["action"],
         },
       },
       {
-        name: "playback_options",
+        name: "settings",
         description:
-          "Set MPD playback options (repeat, random, single, consume)",
+          "Change how music plays - repeat songs, shuffle, play once, or remove after playing",
         inputSchema: {
           type: "object",
           properties: {
             repeat: {
               type: "boolean",
-              description: "Enable/disable repeat mode",
+              description:
+                "Turn on/off repeat mode (play the playlist over and over)",
             },
             random: {
               type: "boolean",
-              description: "Enable/disable random mode",
+              description:
+                "Turn on/off shuffle mode (play songs in random order)",
             },
             single: {
               type: "boolean",
-              description: "Enable/disable single mode",
+              description:
+                "Turn on/off single mode (play only one song and stop)",
             },
             consume: {
               type: "boolean",
-              description: "Enable/disable consume mode",
+              description:
+                "Turn on/off consume mode (remove songs from playlist after playing)",
             },
           },
         },
@@ -356,21 +364,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 Welcome to the MPD Music Control Server! Here are the available commands:
 
 ## Basic Controls
-- \`play_music\` - Start playing music
-- \`pause_music\` - Pause the currently playing music
-- \`next_track\` - Skip to the next song
-- \`play_specific\` - Play specific artist, album, or song by name (use simple terms)
-- \`playback_control\` - Advanced playback control with options
+- \`resume\` - Start playing music
+- \`pause\` - Pause the music that is currently playing
+- \`next\` - Skip to the next song
+- \`play\` - Play a specific artist, album, or song by name (use simple terms)
+- \`player\` - Advanced playback control with options
 
 ## Searching Music
-- \`search_music\` - Search for music by artist, album, title or any field
+- \`search\` - Find music by artist, album, title or any field
 
 ## Playlist Management
-- \`playlist_manager\` - Manage your playlist (add, remove, clear)
+- \`playlist\` - Manage your playlist (add, remove, clear)
 
 ## Settings
-- \`volume_control\` - Set the volume level
-- \`playback_options\` - Set repeat, random, single, and consume modes
+- \`volume\` - Set the volume level
+- \`settings\` - Set repeat, random, single, and consume modes
 
 ## Resources
 You can also view:
@@ -385,7 +393,7 @@ For more specific help, try \`help\` with a topic like "search", "playback", or 
             case "search":
               helpText = `# Music Search Help
 
-Use \`search_music\` to find music in your library:
+Use \`search\` to find music in your library:
 
 Basic search (searches all fields):
 - Just provide a query string
@@ -404,10 +412,10 @@ Search results will show matching songs that you can then play.`;
               helpText = `# Playback Control Help
 
 Basic controls:
-- \`play_music\` - Start playing music
-- \`pause_music\` - Pause the current track
-- \`next_track\` - Skip to the next track
-- \`play_specific\` - Play specific music by name (recommended)
+- \`resume\` - Start playing music
+- \`pause\` - Pause the current track
+- \`next\` - Skip to the next track
+- \`play\` - Play specific music by name (recommended)
   - Examples:
   - Play artist: \`{"query": "deftones", "type": "artist"}\`
   - Play album: \`{"query": "white pony", "type": "album"}\`
@@ -415,15 +423,15 @@ Basic controls:
   - Simple search and play: \`{"query": "deftones"}\`
   - Note: Use simple search terms rather than copying the full formatted result
 
-Advanced control with \`playback_control\`:
-- Play: \`{"action": "play"}\`
-- Play specific position: \`{"action": "play", "position": 3}\`
+Advanced control with \`player\`:
+- Resume: \`{"action": "resume"}\`
+- Resume specific position: \`{"action": "resume", "position": 3}\`
 - Pause: \`{"action": "pause"}\`
 - Stop: \`{"action": "stop"}\`
 - Next: \`{"action": "next"}\`
 - Previous: \`{"action": "previous"}\`
 
-Playback options with \`playback_options\`:
+Playback options with \`settings\`:
 - Repeat mode: \`{"repeat": true}\`
 - Random mode: \`{"random": true}\`
 - Single mode: \`{"single": true}\`
@@ -433,7 +441,7 @@ Playback options with \`playback_options\`:
             case "playlist":
               helpText = `# Playlist Management Help
 
-Use \`playlist_manager\` with these actions:
+Use \`playlist\` with these actions:
 
 - Add a song: \`{"action": "add", "uri": "file_path_or_uri"}\`
 - Remove a song: \`{"action": "delete", "position": 2}\`
@@ -445,7 +453,7 @@ You can view the current playlist contents through the MPD resources.`;
             case "volume":
               helpText = `# Volume Control Help
 
-Use \`volume_control\` to adjust the volume:
+Use \`volume\` to adjust the volume:
 
 \`{"volume": 75}\`
 
@@ -464,7 +472,7 @@ The volume range is 0-100, where:
         };
       }
 
-      case "play_music": {
+      case "resume": {
         try {
           await mpdClient.play();
           const status = await mpdClient.status();
@@ -482,16 +490,16 @@ The volume range is 0-100, where:
             content: [
               {
                 type: "text",
-                text: `Music playback started. ${songInfo}`,
+                text: `Music playback resumed. ${songInfo}`,
               },
             ],
           };
         } catch (error) {
-          throw new Error(`Error starting music: ${(error as Error).message}`);
+          throw new Error(`Error resuming music: ${(error as Error).message}`);
         }
       }
 
-      case "pause_music": {
+      case "pause": {
         try {
           await mpdClient.pause();
           return {
@@ -507,7 +515,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "next_track": {
+      case "next": {
         try {
           await mpdClient.next();
           const currentSong = await mpdClient.currentSong();
@@ -535,7 +543,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "play_specific": {
+      case "play": {
         const query = String(request.params.arguments?.query);
         const type = request.params.arguments?.type
           ? String(request.params.arguments.type)
@@ -681,7 +689,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "playback_control": {
+      case "player": {
         const action = String(request.params.arguments?.action);
         const position =
           request.params.arguments?.position !== undefined
@@ -690,7 +698,7 @@ The volume range is 0-100, where:
 
         try {
           switch (action) {
-            case "play":
+            case "resume":
               await mpdClient.play(position);
               break;
             case "pause":
@@ -725,7 +733,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "volume_control": {
+      case "volume": {
         const volume = Number(request.params.arguments?.volume);
         if (isNaN(volume) || volume < 0 || volume > 100) {
           throw new Error("Volume must be a number between 0 and 100");
@@ -746,7 +754,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "search_music": {
+      case "search": {
         const query = String(request.params.arguments?.query);
         // Type is optional, defaults to "any"
         const type = request.params.arguments?.type
@@ -841,7 +849,7 @@ The volume range is 0-100, where:
 
             // Add a tip for how to play this exact song
             if (index === 0) {
-              resultText += `   To play this song, use: play_specific with {"query": "${song.title}"}\n\n`;
+              resultText += `   To play this song, use: play with {"query": "${song.title}"}\n\n`;
             }
 
             resultData.push({
@@ -867,7 +875,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "playlist_manager": {
+      case "playlist": {
         const action = String(request.params.arguments?.action);
         const uri =
           request.params.arguments?.uri !== undefined
@@ -919,7 +927,7 @@ The volume range is 0-100, where:
         }
       }
 
-      case "playback_options": {
+      case "settings": {
         const repeat =
           request.params.arguments?.repeat !== undefined
             ? Boolean(request.params.arguments.repeat)
