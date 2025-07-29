@@ -297,7 +297,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description:
                 "What you want to do with the playlist: add a song, delete a song, or clear all songs",
             },
-            uri: {
+            uriOrQuery: {
               type: "string",
               description:
                 "Path to the song file you want to add (needed only when adding)",
@@ -877,9 +877,9 @@ The volume range is 0-100, where:
 
       case "playlist": {
         const action = String(request.params.arguments?.action);
-        const uri =
-          request.params.arguments?.uri !== undefined
-            ? String(request.params.arguments.uri)
+        const uriOrQuery =
+          request.params.arguments?.uriOrQuery !== undefined
+            ? String(request.params.arguments.uriOrQuery)
             : undefined;
         const position =
           request.params.arguments?.position !== undefined
@@ -889,13 +889,43 @@ The volume range is 0-100, where:
         try {
           switch (action) {
             case "add":
-              if (!uri) {
-                throw new Error("URI is required for add action");
+              if (!uriOrQuery) {
+                throw new Error(
+                  "URI or search query is required for add action",
+                );
               }
-              await mpdClient.playlistAdd(uri);
-              return {
-                content: [{ type: "text", text: `Added '${uri}' to playlist` }],
-              };
+
+              // Try to add the URI directly first
+              try {
+                await mpdClient.playlistAdd(uriOrQuery);
+                return {
+                  content: [
+                    { type: "text", text: `Added '${uriOrQuery}' to playlist` },
+                  ],
+                };
+              } catch (error) {
+                // If that fails, try searching for the query
+                try {
+                  const results = await mpdClient.search("any", uriOrQuery);
+                  if (results.length > 0) {
+                    await mpdClient.playlistAdd(results[0].file);
+                    return {
+                      content: [
+                        {
+                          type: "text",
+                          text: `Added '${results[0].file}' to playlist`,
+                        },
+                      ],
+                    };
+                  } else {
+                    throw new Error("No results found for the search query");
+                  }
+                } catch (searchError) {
+                  throw new Error(
+                    `Could not add to playlist: ${(searchError as Error).message}`,
+                  );
+                }
+              }
 
             case "delete":
               if (position === undefined) {
